@@ -18,7 +18,7 @@ const handler = (req, res) => {
 
 const app = http.createServer(handler);
 
-app.listen(3000);
+app.listen(port);
 
 const io = socketio(app);
 
