@@ -22,11 +22,57 @@ app.listen(port);
 
 const io = socketio(app);
 
+var movRad = 5;
+
 io.on('connection', (socket) => {
   socket.join('room1');
 
   socket.on('draw', (data) => {
     io.sockets.in('room1').emit('drawn', data);
+  });
+  
+  socket.on('movement', (data) => {
+    
+    const time = new Date().getTime();
+    data.coords.lastUpdate = time;
+        
+    if(data.keysDown[38] && data.keysDown[39]) {
+      data.coords.x += Math.cos(45*Math.PI/180) * movRad;
+      data.coords.y -= Math.sin(45*Math.PI/180) * movRad;
+    }
+        
+    else if(data.keysDown[38] && data.keysDown[37]) {
+      data.coords.x -= Math.cos(45*Math.PI/180) * movRad;
+      data.coords.y -= Math.sin(45*Math.PI/180) * movRad;
+    }
+        
+    else if(data.keysDown[37] && data.keysDown[40]) {
+      data.coords.x -= Math.cos(45*Math.PI/180) * movRad;
+      data.coords.y += Math.sin(45*Math.PI/180) * movRad;
+    }
+        
+    else if(data.keysDown[39] && data.keysDown[40]) {
+      data.coords.x += Math.cos(45*Math.PI/180) * movRad;
+      data.coords.y += Math.sin(45*Math.PI/180) * movRad;
+    }
+        
+    else if(data.keysDown[37]) {
+      data.coords.x -= movRad;
+    }
+        
+    else if(data.keysDown[39]) {
+      data.coords.x += movRad;
+    }
+        
+    else if(data.keysDown[38]) {
+      data.coords.y -= movRad;
+    }
+        
+    else if(data.keysDown[40]) {
+      data.coords.y += movRad;
+    }
+    
+    io.sockets.in('room1').emit('move', data);
   });
 
   socket.on('disconnect', () => {

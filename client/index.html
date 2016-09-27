@@ -12,6 +12,8 @@
       var canvas = document.getElementById('myCanvas');
       var ctx = canvas.getContext('2d');
       
+      var keysDown = {};
+       
       //draw all shapes in stack
       const draw = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -26,6 +28,9 @@
           ctx.arc(drawCall.x, drawCall.y, drawCall.rad, 0, 2 * Math.PI);
           ctx.fillStyle = drawCall.fill;
           ctx.fill();
+          ctx.strokeStyle = drawCall.stroke;
+          ctx.lineWidth = 5;
+          ctx.stroke();
           //ctx.closePath();
         }
       }
@@ -35,7 +40,8 @@
         let x = Math.floor(Math.random() * canvas.width);
         let y = Math.floor(Math.random() * canvas.height);
         let fill = '#' + ("000000" + Math.random().toString(16).slice(2, 8).toUpperCase()).slice(-6); //code from http://www.daverabideau.com/blog/
-        draws[user] = {lastUpdate: time, x: x, y: y, rad: 20, fill: fill};
+        let stroke = '#' + ("000000" + Math.random().toString(16).slice(2, 8).toUpperCase()).slice(-6);
+        draws[user] = {lastUpdate: time, x: x, y: y, rad: 20, fill: fill, stroke: stroke};
       }
       
       //add parameters from server to draw stack
@@ -51,63 +57,12 @@
         draw();
       }
       
-      // code from http://stackoverflow.com/questions/5203407/javascript-multiple-keys-pressed-at-once
-      var map = {};
-      onkeydown = onkeyup = (e) => {
-        e = e || event;
-        map[e.keyCode] = e.type == 'keydown';
+      const handleMove = (data) => {
+        socket.emit('draw', {name: data.name, coords: data.coords });
       }
       
-      const keyHandler = (e) => {
-        const time = new Date().getTime();
-        
-        if(map[38] && map[39]) {
-          draws[user].lastUpdate = time;
-          draws[user].x += 3;
-          draws[user].y -= 3;
-        }
-        
-        else if(map[38] && map[37]) {
-          draws[user].lastUpdate = time;
-          draws[user].x -= 3;
-          draws[user].y -= 3;
-        }
-        
-        else if(map[37] && map[40]) {
-          draws[user].lastUpdate = time;
-          draws[user].x -= 3;
-          draws[user].y += 3;
-        }
-        
-        else if(map[39] && map[40]) {
-          draws[user].lastUpdate = time;
-          draws[user].x += 3;
-          draws[user].y += 3;
-        }
-        
-        else if(map[37]) {
-          draws[user].lastUpdate = time;
-          draws[user].x -= 5;
-        }
-        
-        else if(map[39]) {
-          draws[user].lastUpdate = time;
-          draws[user].x += 5;
-        }
-        
-        else if(map[38]) {
-          draws[user].lastUpdate = time;
-          draws[user].y -= 5;
-        }
-        
-        else if(map[40]) {
-          draws[user].lastUpdate = time;
-          draws[user].y += 5;
-        }
-        
-        socket.emit('draw', {name: user, coords: draws[user] });
-        
-        draw();
+      const sendKeys = () => {
+        socket.emit('movement', {name: user, keysDown:keysDown, coords: draws[user] });
       }
     
       const init = () => {
@@ -117,11 +72,20 @@
           //add a circle to the data structure upon connecting
           setup();
           draw();
+          setInterval(sendKeys, 50);
         });
         
-        document.onkeydown = keyHandler;
+        //keep track of keysDown that are down
+        document.onkeydown = (e) => {
+          keysDown[e.keyCode] = true;
+        };
+        document.onkeyup = (e) => {
+          keysDown[e.keyCode] = false;
+        };
         
         socket.on('drawn', handleDraw);
+        
+        socket.on('move', handleMove);
       };
     
     window.onload = init;
